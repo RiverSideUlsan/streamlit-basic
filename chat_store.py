@@ -36,6 +36,7 @@ def init_database(database_path=DB_PATH):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id TEXT NOT NULL,
                 title TEXT NOT NULL,
+                persona TEXT NOT NULL DEFAULT 'dawon',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -45,6 +46,7 @@ def init_database(database_path=DB_PATH):
                 session_id INTEGER NOT NULL,
                 user_text TEXT NOT NULL,
                 assistant_text TEXT NOT NULL,
+                assistant_mood TEXT NOT NULL DEFAULT 'hi',
                 file_name TEXT,
                 file_content TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -52,13 +54,32 @@ def init_database(database_path=DB_PATH):
             );
             """
         )
+        columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(chat_sessions)").fetchall()
+        }
+        if "persona" not in columns:
+            connection.execute(
+                "ALTER TABLE chat_sessions "
+                "ADD COLUMN persona TEXT NOT NULL DEFAULT 'dawon'"
+            )
+
+        turn_columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(chat_turns)").fetchall()
+        }
+        if "assistant_mood" not in turn_columns:
+            connection.execute(
+                "ALTER TABLE chat_turns "
+                "ADD COLUMN assistant_mood TEXT NOT NULL DEFAULT 'hi'"
+            )
 
 
-def create_session(user_id, title="새 채팅", database_path=DB_PATH):
+def create_session(user_id, title="새 채팅", database_path=DB_PATH, persona="dawon"):
     with _database_connection(database_path) as connection:
         cursor = connection.execute(
-            "INSERT INTO chat_sessions (user_id, title) VALUES (?, ?)",
-            (user_id, title),
+            "INSERT INTO chat_sessions (user_id, title, persona) VALUES (?, ?, ?)",
+            (user_id, title, persona),
         )
         session_id = cursor.lastrowid
         _trim_sessions(connection, user_id)
@@ -83,7 +104,7 @@ def list_sessions(user_id, database_path=DB_PATH):
     with _database_connection(database_path) as connection:
         return connection.execute(
             """
-            SELECT id, title, created_at, updated_at
+            SELECT id, title, persona, created_at, updated_at
             FROM chat_sessions
             WHERE user_id = ?
             ORDER BY updated_at DESC, id DESC
@@ -95,7 +116,7 @@ def list_sessions(user_id, database_path=DB_PATH):
 def get_session(user_id, session_id, database_path=DB_PATH):
     with _database_connection(database_path) as connection:
         return connection.execute(
-            "SELECT id, title FROM chat_sessions WHERE user_id = ? AND id = ?",
+            "SELECT id, title, persona FROM chat_sessions WHERE user_id = ? AND id = ?",
             (user_id, session_id),
         ).fetchone()
 
@@ -104,7 +125,8 @@ def list_turns(user_id, session_id, database_path=DB_PATH):
     with _database_connection(database_path) as connection:
         return connection.execute(
             """
-            SELECT chat_turns.id, user_text, assistant_text, file_name, file_content,
+            SELECT chat_turns.id, user_text, assistant_text, assistant_mood,
+                   file_name, file_content,
                    chat_turns.created_at
             FROM chat_turns
             JOIN chat_sessions ON chat_sessions.id = chat_turns.session_id
@@ -116,7 +138,7 @@ def list_turns(user_id, session_id, database_path=DB_PATH):
 
 
 def save_turn(user_id, session_id, user_text, assistant_text, file_name=None,
-              file_content=None, database_path=DB_PATH):
+              file_content=None, assistant_mood="agree", database_path=DB_PATH):
     with _database_connection(database_path) as connection:
         session = connection.execute(
             "SELECT id FROM chat_sessions WHERE user_id = ? AND id = ?",
@@ -128,10 +150,17 @@ def save_turn(user_id, session_id, user_text, assistant_text, file_name=None,
         connection.execute(
             """
             INSERT INTO chat_turns (
-                session_id, user_text, assistant_text, file_name, file_content
-            ) VALUES (?, ?, ?, ?, ?)
+                session_id, user_text, assistant_text, assistant_mood, file_name, file_content
+            ) VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (session_id, user_text, assistant_text, file_name, file_content),
+            (
+                session_id,
+                user_text,
+                assistant_text,
+                assistant_mood,
+                file_name,
+                file_content,
+            ),
         )
         connection.execute(
             """

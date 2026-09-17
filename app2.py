@@ -1,13 +1,61 @@
 import streamlit as st
 
-from app2_access import logout, require_login
+from app2_access import get_username, is_logged_in, logout, require_login
 from chat_store import init_database
+
+
+MASCOT_PATH = "assets/pencil.png"
+
+
+def apply_pencil_sketch_style():
+    st.html(
+        """
+        <style>
+        [data-testid="stAppViewContainer"] {
+            background-color: #fff9ee;
+            background-image:
+                radial-gradient(#e8be9344 0.8px, transparent 0.8px),
+                linear-gradient(115deg, #fffdf8 0%, #fff5e2 100%);
+            background-size: 12px 12px, 100% 100%;
+        }
+
+        [data-testid="stSidebar"] {
+            background-image:
+                repeating-linear-gradient(
+                    -18deg,
+                    transparent 0,
+                    transparent 9px,
+                    #e8be9322 10px,
+                    transparent 11px
+                );
+        }
+
+        [data-testid="stForm"],
+        [data-testid="stChatMessage"] {
+            border: 2px dashed #d99f76;
+            border-radius: 20px;
+            box-shadow: 3px 4px 0 #f5d4b7;
+        }
+
+        [data-testid="stPageLink"] a,
+        .stButton > button {
+            border: 2px solid #2f5a86;
+            box-shadow: 2px 3px 0 #e8be93;
+        }
+
+        [data-testid="stPageLink"] a:hover,
+        .stButton > button:hover {
+            transform: rotate(-1deg) translateY(-1px);
+        }
+        </style>
+        """
+    )
 
 
 st.set_page_config(page_title="배포형 AI 채팅", page_icon="💬", layout="wide")
 
 init_database()
-require_login()
+apply_pencil_sketch_style()
 
 page = st.navigation(
     {
@@ -19,13 +67,27 @@ page = st.navigation(
             st.Page("app2_history.py", title="대화 내역", icon="🕘"),
         ],
     },
-    position="sidebar",
+    position="hidden",
 )
 
 with st.sidebar:
-    st.divider()
-    if st.button("로그아웃"):
-        logout()
-        st.rerun()
+    if is_logged_in():
+        st.title(get_username())
+    else:
+        st.title("채팅")
 
+    # st.image(MASCOT_PATH, width=190)
+    st.caption("색연필로 한 걸음씩, 함께 정리해요.")
+
+    st.page_link("app2_chat.py", label="AI 채팅", icon="💬", width="stretch")
+    st.page_link("app2_key.py", label="API 키 등록", icon="🔑", width="stretch")
+    st.page_link("app2_history.py", label="대화 내역", icon="🕘", width="stretch")
+
+    if is_logged_in():
+        st.divider()
+        if st.button("로그아웃"):
+            logout()
+            st.rerun()
+
+require_login()
 page.run()

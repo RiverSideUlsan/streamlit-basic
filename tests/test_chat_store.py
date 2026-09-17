@@ -1,3 +1,4 @@
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -40,3 +41,63 @@ class ChatStoreTest(unittest.TestCase):
 
         self.assertEqual(len(list_turns("user-a", first_session, self.database_path)), 1)
         self.assertEqual(len(list_turns("user-a", second_session, self.database_path)), 0)
+
+    def test_saves_the_assistant_mood_for_chat_avatars(self):
+        session_id = create_session("user-a", database_path=self.database_path)
+        save_turn(
+            "user-a",
+            session_id,
+            "질문",
+            "답변",
+            assistant_mood="agree",
+            database_path=self.database_path,
+        )
+
+        turn = list_turns("user-a", session_id, self.database_path)[0]
+
+        self.assertEqual(turn["assistant_mood"], "agree")
+
+    def test_adds_assistant_mood_to_an_existing_database(self):
+        connection = sqlite3.connect(self.database_path)
+        try:
+            connection.execute("DROP TABLE chat_turns")
+            connection.execute(
+                """
+                CREATE TABLE chat_turns (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER NOT NULL,
+                    user_text TEXT NOT NULL,
+                    assistant_text TEXT NOT NULL,
+                    file_name TEXT,
+                    file_content TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        init_database(self.database_path)
+
+        connection = sqlite3.connect(self.database_path)
+        try:
+            columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(chat_turns)")
+            }
+        finally:
+            connection.close()
+
+        self.assertIn("assistant_mood", columns)
+
+    def test_saves_the_selected_persona_with_a_session(self):
+        session_id = create_session(
+            "user-a",
+            database_path=self.database_path,
+            persona="junho",
+        )
+
+        session = list_sessions("user-a", self.database_path)[0]
+
+        self.assertEqual(session["id"], session_id)
+        self.assertEqual(session["persona"], "junho")

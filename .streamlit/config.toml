@@ -1,7 +1,22 @@
 [theme]
 base = "light"
-primaryColor = "#3155D9"
-backgroundColor = "#F7F8FC"
-secondaryBackgroundColor = "#EEF1F8"
-textColor = "#1D2433"
-font = "sans serif"
+primaryColor = "#2F5A86"
+backgroundColor = "#FFF9EE"
+secondaryBackgroundColor = "#FFF0D7"
+textColor = "#33415C"
+borderColor = "#E8BE93"
+font = "'Gowun Dodum':https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap"
+headingFont = "'Gaegu':https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap"
+baseRadius = "large"
+buttonRadius = "full"
+showWidgetBorder = true
+showSidebarBorder = true
+orangeColor = "#E8905D"
+greenColor = "#789B72"
+blueColor = "#2F5A86"
+
+[theme.sidebar]
+backgroundColor = "#FFF1D6"
+secondaryBackgroundColor = "#FFE4BD"
+textColor = "#33415C"
+borderColor = "#E8BE93"

@@ -62,6 +62,10 @@ def get_user_id():
     return f"sqlite:{st.session_state[LOGIN_STATE_NAME]}"
 
 
+def get_username():
+    return st.session_state[LOGIN_STATE_NAME]
+
+
 def logout():
     st.session_state.pop(LOGIN_STATE_NAME, None)
     clear_api_key()
