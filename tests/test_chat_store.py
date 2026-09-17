@@ -3,7 +3,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from chat_store import create_session, init_database, list_sessions, list_turns, save_turn
+from chat_store import (
+    create_session,
+    get_session,
+    get_user_model,
+    get_user_persona,
+    init_database,
+    list_sessions,
+    list_turns,
+    save_turn,
+    save_user_model,
+    save_user_persona,
+)
 
 
 class ChatStoreTest(unittest.TestCase):
@@ -101,3 +112,28 @@ class ChatStoreTest(unittest.TestCase):
 
         self.assertEqual(session["id"], session_id)
         self.assertEqual(session["persona"], "junho")
+
+    def test_saves_a_character_opening_message_with_a_session(self):
+        opening_message = "반가워요. 오늘은 어떤 이야기를 나눌까요?"
+        session_id = create_session(
+            "user-a",
+            database_path=self.database_path,
+            persona="junho",
+            opening_message=opening_message,
+        )
+
+        session = get_session("user-a", session_id, self.database_path)
+
+        self.assertEqual(session["opening_message"], opening_message)
+
+    def test_saves_a_user_persona_by_user(self):
+        save_user_persona("user-a", "프로그래밍 초보자", self.database_path)
+        save_user_persona("user-b", "창업 준비자", self.database_path)
+
+        self.assertEqual(get_user_persona("user-a", self.database_path), "프로그래밍 초보자")
+        self.assertEqual(get_user_persona("user-b", self.database_path), "창업 준비자")
+
+    def test_saves_a_chat_model_by_user(self):
+        save_user_model("user-a", "gpt-5.5", self.database_path)
+
+        self.assertEqual(get_user_model("user-a", self.database_path), "gpt-5.5")

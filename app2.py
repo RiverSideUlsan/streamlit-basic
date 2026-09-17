@@ -1,10 +1,24 @@
 import streamlit as st
 
-from app2_access import get_username, is_logged_in, logout, require_login
-from chat_store import init_database
+from app2_access import get_user_id, get_username, is_logged_in, logout, require_login
+from chat_store import get_session, init_database
 
 
 MASCOT_PATH = "assets/pencil.png"
+SIDEBAR_CHARACTER_IMAGES = {
+    "dawon": {
+        "hi": "assets/dawon-female-casual-hi.png",
+        "listen": "assets/dawon-female-casual-listen.png",
+        "think": "assets/dawon-female-casual-think.png",
+        "agree": "assets/dawon-female-casual-agree.png",
+    },
+    "junho": {
+        "hi": "assets/junho-male-casual-hi.png",
+        "listen": "assets/junho-male-casual-listen.png",
+        "think": "assets/junho-male-casual-think.png",
+        "agree": "assets/junho-male-casual-agree.png",
+    },
+}
 
 
 def apply_pencil_sketch_style():
@@ -63,7 +77,7 @@ page = st.navigation(
             st.Page("app2_chat.py", title="AI 채팅", icon="💬", default=True),
         ],
         "관리": [
-            st.Page("app2_key.py", title="API 키 등록", icon="🔑"),
+            st.Page("app2_mypage.py", title="마이페이지", icon="👤"),
             st.Page("app2_history.py", title="대화 내역", icon="🕘"),
         ],
     },
@@ -71,16 +85,31 @@ page = st.navigation(
 )
 
 with st.sidebar:
+    character_image_slot = st.empty()
+    st.session_state.sidebar_character_image_slot = character_image_slot
+
+    if is_logged_in() and "active_chat_session_id" in st.session_state:
+        active_session = get_session(
+            get_user_id(),
+            st.session_state.active_chat_session_id,
+        )
+        if active_session:
+            mood_key = f"character_mood_{active_session['id']}"
+            mood = st.session_state.get(mood_key, "hi")
+            image_path = SIDEBAR_CHARACTER_IMAGES.get(
+                active_session["persona"],
+                {},
+            ).get(mood)
+            if image_path:
+                character_image_slot.image(image_path, width="stretch")
+
     if is_logged_in():
         st.title(get_username())
     else:
         st.title("채팅")
 
-    # st.image(MASCOT_PATH, width=190)
-    st.caption("색연필로 한 걸음씩, 함께 정리해요.")
-
     st.page_link("app2_chat.py", label="AI 채팅", icon="💬", width="stretch")
-    st.page_link("app2_key.py", label="API 키 등록", icon="🔑", width="stretch")
+    st.page_link("app2_mypage.py", label="마이페이지", icon="👤", width="stretch")
     st.page_link("app2_history.py", label="대화 내역", icon="🕘", width="stretch")
 
     if is_logged_in():

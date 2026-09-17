@@ -8,6 +8,8 @@ from pathlib import Path
 DB_PATH = Path(__file__).resolve().with_name("chat_history.db")
 MAX_SESSIONS = 10
 MAX_TURNS = 100
+DEFAULT_MODEL = "gpt-5.6-luna"
+AVAILABLE_MODELS = [DEFAULT_MODEL, "gpt-5.5", "gpt-5-mini"]
 
 
 def _connect(database_path=DB_PATH):
@@ -37,6 +39,7 @@ def init_database(database_path=DB_PATH):
                 user_id TEXT NOT NULL,
                 title TEXT NOT NULL,
                 persona TEXT NOT NULL DEFAULT 'dawon',
+                opening_message TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -52,6 +55,13 @@ def init_database(database_path=DB_PATH):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                user_id TEXT PRIMARY KEY,
+                persona_text TEXT NOT NULL DEFAULT '',
+                model_name TEXT NOT NULL DEFAULT 'gpt-5.6-luna',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
             """
         )
         columns = {
@@ -62,6 +72,11 @@ def init_database(database_path=DB_PATH):
             connection.execute(
                 "ALTER TABLE chat_sessions "
                 "ADD COLUMN persona TEXT NOT NULL DEFAULT 'dawon'"
+            )
+        if "opening_message" not in columns:
+            connection.execute(
+                "ALTER TABLE chat_sessions "
+                "ADD COLUMN opening_message TEXT"
             )
 
         turn_columns = {
@@ -74,12 +89,31 @@ def init_database(database_path=DB_PATH):
                 "ADD COLUMN assistant_mood TEXT NOT NULL DEFAULT 'hi'"
             )
 
+        profile_columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(user_profiles)").fetchall()
+        }
+        if "model_name" not in profile_columns:
+            connection.execute(
+                "ALTER TABLE user_profiles "
+                "ADD COLUMN model_name TEXT NOT NULL DEFAULT 'gpt-5.6-luna'"
+            )
 
-def create_session(user_id, title="새 채팅", database_path=DB_PATH, persona="dawon"):
+
+def create_session(
+    user_id,
+    title="새 채팅",
+    database_path=DB_PATH,
+    persona="dawon",
+    opening_message=None,
+):
     with _database_connection(database_path) as connection:
         cursor = connection.execute(
-            "INSERT INTO chat_sessions (user_id, title, persona) VALUES (?, ?, ?)",
-            (user_id, title, persona),
+            """
+            INSERT INTO chat_sessions (user_id, title, persona, opening_message)
+            VALUES (?, ?, ?, ?)
+            """,
+            (user_id, title, persona, opening_message),
         )
         session_id = cursor.lastrowid
         _trim_sessions(connection, user_id)
@@ -104,7 +138,7 @@ def list_sessions(user_id, database_path=DB_PATH):
     with _database_connection(database_path) as connection:
         return connection.execute(
             """
-            SELECT id, title, persona, created_at, updated_at
+            SELECT id, title, persona, opening_message, created_at, updated_at
             FROM chat_sessions
             WHERE user_id = ?
             ORDER BY updated_at DESC, id DESC
@@ -116,9 +150,59 @@ def list_sessions(user_id, database_path=DB_PATH):
 def get_session(user_id, session_id, database_path=DB_PATH):
     with _database_connection(database_path) as connection:
         return connection.execute(
-            "SELECT id, title, persona FROM chat_sessions WHERE user_id = ? AND id = ?",
+            """
+            SELECT id, title, persona, opening_message
+            FROM chat_sessions
+            WHERE user_id = ? AND id = ?
+            """,
             (user_id, session_id),
         ).fetchone()
+
+
+def get_user_persona(user_id, database_path=DB_PATH):
+    with _database_connection(database_path) as connection:
+        profile = connection.execute(
+            "SELECT persona_text FROM user_profiles WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+    return profile["persona_text"] if profile else ""
+
+
+def save_user_persona(user_id, persona_text, database_path=DB_PATH):
+    with _database_connection(database_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO user_profiles (user_id, persona_text, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                persona_text = excluded.persona_text,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (user_id, persona_text.strip()),
+        )
+
+
+def get_user_model(user_id, database_path=DB_PATH):
+    with _database_connection(database_path) as connection:
+        profile = connection.execute(
+            "SELECT model_name FROM user_profiles WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+    return profile["model_name"] if profile else DEFAULT_MODEL
+
+
+def save_user_model(user_id, model_name, database_path=DB_PATH):
+    with _database_connection(database_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO user_profiles (user_id, model_name, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                model_name = excluded.model_name,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (user_id, model_name),
+        )
 
 
 def list_turns(user_id, session_id, database_path=DB_PATH):

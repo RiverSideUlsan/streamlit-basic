@@ -1,41 +1,61 @@
-import os
-
 import streamlit as st
 from openai import OpenAI
 
 from app2_access import get_api_key, get_user_id, require_api_key, require_login
-from chat_store import create_session, get_session, list_sessions, list_turns, save_turn
+from chat_store import (
+    create_session,
+    get_session,
+    get_user_model,
+    get_user_persona,
+    list_sessions,
+    list_turns,
+    save_turn,
+)
 from persona_store import load_persona
 
 
 PERSONAS = {
     "dawon": {
         "label": "다온 · 직장인 여성",
-        "image": "assets/female-casual-hi.png",
+        "image": "assets/dawon-female-casual-hi.png",
         "images": {
-            "hi": "assets/female-casual-hi.png",
-            "listen": "assets/female-casual-listen.png",
-            "think": "assets/female-casual-think.png",
-            "agree": "assets/female-casual-agree.png",
+            "hi": "assets/dawon-female-casual-hi.png",
+            "listen": "assets/dawon-female-casual-listen.png",
+            "think": "assets/dawon-female-casual-think.png",
+            "agree": "assets/dawon-female-casual-agree.png",
         },
         "file_name": "다온.md",
+        "opening_message": (
+            "안녕하세요, 다온이에요. 오늘 하루는 어땠어요? "
+            "마음에 남은 일이나 함께 정리하고 싶은 이야기가 있으면 들려주세요."
+        ),
     },
     "junho": {
         "label": "준호 · 직장인 남성",
-        "image": "assets/male-casual-hi.png",
+        "image": "assets/junho-male-casual-hi.png",
         "images": {
-            "hi": "assets/male-casual-hi.png",
-            "listen": "assets/male-casual-listen.png",
-            "think": "assets/male-casual-think.png",
-            "agree": "assets/male-casual-agree.png",
+            "hi": "assets/junho-male-casual-hi.png",
+            "listen": "assets/junho-male-casual-listen.png",
+            "think": "assets/junho-male-casual-think.png",
+            "agree": "assets/junho-male-casual-agree.png",
         },
         "file_name": "준호.md",
+        "opening_message": (
+            "반가워요, 준호예요. 오늘은 어떤 일로 이야기해 볼까요? "
+            "업무 고민이든 가벼운 일상이든 편하게 꺼내 주세요."
+        ),
     },
 }
 
 
 def character_image(persona_config, mood="hi"):
     return persona_config["images"].get(mood, persona_config["image"])
+
+
+def update_sidebar_character(persona_config, mood):
+    image_slot = st.session_state.get("sidebar_character_image_slot")
+    if image_slot:
+        image_slot.image(character_image(persona_config, mood), width="stretch")
 
 
 @st.dialog("새 채팅: 대화상대 선택")
@@ -58,6 +78,7 @@ def show_persona_selector(user_id):
                 st.session_state.active_chat_session_id = create_session(
                     user_id,
                     persona=persona_id,
+                    opening_message=persona_config["opening_message"],
                 )
                 st.rerun()
 
@@ -84,8 +105,6 @@ with st.sidebar:
         show_persona_selector(user_id)
         st.stop()
 
-    character_image_slot = st.empty()
-
     if sessions:
         session_ids = [row["id"] for row in sessions]
         selected_session_id = st.selectbox(
@@ -97,11 +116,6 @@ with st.sidebar:
             format_func=lambda session_id: session_label(session_id, sessions),
         )
         st.session_state.active_chat_session_id = selected_session_id
-
-    model_name = st.selectbox(
-        "모델 선택",
-        [os.getenv("OPENAI_MODEL", "gpt-5.6-luna"), "gpt-5.5", "gpt-5-mini"],
-    )
 
 if "active_chat_session_id" not in st.session_state:
     show_persona_selector(user_id)
@@ -116,21 +130,35 @@ if not session:
 
 persona_config = PERSONAS.get(session["persona"], PERSONAS["dawon"])
 persona = load_persona(persona_config)
+opening_message = session["opening_message"]
 turns = list_turns(user_id, session_id)
 reaction_state_key = f"character_mood_{session_id}"
 if reaction_state_key not in st.session_state:
     st.session_state[reaction_state_key] = (
         turns[-1]["assistant_mood"] if turns else "hi"
     )
-
-character_image_slot.image(
-    character_image(persona_config, st.session_state[reaction_state_key]),
-    width=170,
-)
+update_sidebar_character(persona_config, st.session_state[reaction_state_key])
 
 st.title(f"💬 {persona['label']}와 채팅")
 st.caption(persona["intro"])
 st.warning("민감한 개인정보나 비밀번호는 입력하지 마세요.")
+
+if opening_message:
+    with st.chat_message(
+        "assistant",
+        avatar=character_image(persona_config, "hi"),
+    ):
+        st.markdown(opening_message)
+
+if st.session_state.pop("persona_updated_notice", False):
+    with st.chat_message(
+        "assistant",
+        avatar=character_image(persona_config, "agree"),
+    ):
+        st.markdown(
+            "사용자 페르소나를 확인했어요. "
+            "앞으로 이야기할 때 이 내용과 선호하는 방식을 참고할게요."
+        )
 
 for turn in turns:
     with st.chat_message("user"):
@@ -152,7 +180,7 @@ with st.bottom:
 
 if prompt:
     st.session_state[reaction_state_key] = "listen"
-    character_image_slot.image(character_image(persona_config, "listen"), width=170)
+    update_sidebar_character(persona_config, "listen")
 
     file_name = uploaded_file.name if uploaded_file else None
     file_content = (
@@ -164,7 +192,14 @@ if prompt:
     if file_content:
         user_message += f"\n\n[첨부 파일: {file_name}]\n{file_content}"
 
-    messages = [{"role": "system", "content": persona["system"]}]
+    user_persona = get_user_persona(user_id)
+    system_message = persona["system"]
+    if user_persona:
+        system_message += f"\n\n사용자 페르소나:\n{user_persona}"
+
+    messages = [{"role": "system", "content": system_message}]
+    if opening_message:
+        messages.append({"role": "assistant", "content": opening_message})
     for turn in turns:
         messages.append({"role": "user", "content": turn["user_text"]})
         messages.append({"role": "assistant", "content": turn["assistant_text"]})
@@ -176,9 +211,10 @@ if prompt:
             st.caption(f"첨부 파일: {file_name}")
 
     try:
+        model_name = get_user_model(user_id)
         client = OpenAI(api_key=get_api_key())
         st.session_state[reaction_state_key] = "think"
-        character_image_slot.image(character_image(persona_config, "think"), width=170)
+        update_sidebar_character(persona_config, "think")
         with st.chat_message(
             "assistant",
             avatar=character_image(persona_config, "think"),
@@ -191,11 +227,11 @@ if prompt:
             assistant_text = st.write_stream(stream)
     except Exception as error:
         st.session_state[reaction_state_key] = "hi"
-        character_image_slot.image(character_image(persona_config), width=170)
+        update_sidebar_character(persona_config, "hi")
         st.error(f"AI 응답을 받지 못했습니다. {error}")
     else:
         st.session_state[reaction_state_key] = "agree"
-        character_image_slot.image(character_image(persona_config, "agree"), width=170)
+        update_sidebar_character(persona_config, "agree")
         save_turn(
             user_id,
             session_id,

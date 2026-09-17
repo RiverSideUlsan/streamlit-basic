@@ -1,12 +1,18 @@
 """app2의 로그인과 API 키 접근 제어를 담당합니다."""
 
+import os
+from pathlib import Path
+
 import streamlit as st
+from dotenv import load_dotenv
 
 from auth_store import authenticate_user, create_user, init_user_database
 
 
 KEY_STATE_NAME = "registered_openai_api_key"
+KEY_SOURCE_STATE_NAME = "openai_api_key_source"
 LOGIN_STATE_NAME = "logged_in_username"
+ENV_FILE_PATH = Path(__file__).with_name(".env")
 
 SECURITY_NOTICE = (
     "이 앱에 입력한 내용은 외부 AI 서비스로 전송되고 채팅 DB에 저장됩니다. "
@@ -69,6 +75,8 @@ def get_username():
 def logout():
     st.session_state.pop(LOGIN_STATE_NAME, None)
     clear_api_key()
+    st.session_state.pop("user_persona_input", None)
+    st.session_state.pop("user_persona_example", None)
 
 
 def get_api_key():
@@ -81,13 +89,26 @@ def require_api_key():
 
     st.title("OpenAI API 키 등록 필요")
     st.warning("채팅을 시작하려면 로그인 세션에 OpenAI API 키를 등록해야 합니다.")
-    st.page_link("app2_key.py", label="API 키 등록으로 이동", icon="🔑")
+    st.page_link("app2_mypage.py", label="마이페이지로 이동", icon="👤")
     st.stop()
 
 
 def register_api_key(api_key):
     st.session_state[KEY_STATE_NAME] = api_key.strip()
+    st.session_state[KEY_SOURCE_STATE_NAME] = "direct"
+
+
+def register_env_api_key():
+    load_dotenv(ENV_FILE_PATH)
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return False
+
+    st.session_state[KEY_STATE_NAME] = api_key
+    st.session_state[KEY_SOURCE_STATE_NAME] = "env"
+    return True
 
 
 def clear_api_key():
     st.session_state.pop(KEY_STATE_NAME, None)
+    st.session_state.pop(KEY_SOURCE_STATE_NAME, None)
