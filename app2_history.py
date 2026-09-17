@@ -1,11 +1,10 @@
 import streamlit as st
 
-from app2_access import get_user_id, require_api_key, require_login
+from app2_access import get_user_id, require_login
 from chat_store import list_sessions, list_turns
 
 
 require_login()
-require_api_key()
 
 user_id = get_user_id()
 sessions = list_sessions(user_id)

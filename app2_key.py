@@ -1,12 +1,9 @@
-import os
-
 import streamlit as st
 
 from app2_access import (
     SECURITY_NOTICE,
     get_api_key,
     register_api_key,
-    register_local_env_key,
     require_login,
 )
 
@@ -25,10 +22,6 @@ if st.button("키 등록", type="primary"):
         st.success("현재 로그인 세션에 API 키를 등록했습니다.")
     else:
         st.info("OpenAI API 키를 입력해 주세요.")
-
-if os.getenv("OPENAI_API_KEY") and st.button("로컬 .env 키 사용"):
-    register_local_env_key()
-    st.success(".env의 API 키를 현재 로그인 세션에 등록했습니다.")
 
 if get_api_key():
     st.page_link("app2_chat.py", label="채팅 시작", icon="💬")

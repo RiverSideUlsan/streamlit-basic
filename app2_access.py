@@ -1,19 +1,12 @@
 """app2의 로그인과 API 키 접근 제어를 담당합니다."""
 
-import os
-from pathlib import Path
-
 import streamlit as st
-from dotenv import load_dotenv
 
 from auth_store import authenticate_user, create_user, init_user_database
 
 
 KEY_STATE_NAME = "registered_openai_api_key"
 LOGIN_STATE_NAME = "logged_in_username"
-ENV_PATH = Path(__file__).resolve().with_name(".env")
-
-load_dotenv(ENV_PATH)
 
 SECURITY_NOTICE = (
     "이 앱에 입력한 내용은 외부 AI 서비스로 전송되고 채팅 DB에 저장됩니다. "
@@ -90,14 +83,6 @@ def require_api_key():
 
 def register_api_key(api_key):
     st.session_state[KEY_STATE_NAME] = api_key.strip()
-
-
-def register_local_env_key():
-    api_key = os.getenv("OPENAI_API_KEY")
-    if api_key:
-        register_api_key(api_key)
-        return True
-    return False
 
 
 def clear_api_key():
