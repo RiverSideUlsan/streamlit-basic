@@ -1,13 +1,13 @@
 import streamlit as st
 
-from app2_access import clear_api_key, is_development_login, require_login
+from app2_access import logout, require_login
 from chat_store import init_database
 
 
 st.set_page_config(page_title="배포형 AI 채팅", page_icon="💬", layout="wide")
 
-require_login()
 init_database()
+require_login()
 
 page = st.navigation(
     {
@@ -23,14 +23,9 @@ page = st.navigation(
 )
 
 with st.sidebar:
-    if is_development_login():
-        st.warning("개발용 임시 로그인 모드입니다. 배포 전에 끄세요.")
     st.divider()
     if st.button("로그아웃"):
-        clear_api_key()
-        if is_development_login():
-            st.rerun()
-        else:
-            st.logout()
+        logout()
+        st.rerun()
 
 page.run()

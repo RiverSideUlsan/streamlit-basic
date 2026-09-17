@@ -6,47 +6,72 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
+from auth_store import authenticate_user, create_user, init_user_database
 
-ENV_PATH = Path(__file__).resolve().with_name(".env")
-load_dotenv(ENV_PATH)
+
 KEY_STATE_NAME = "registered_openai_api_key"
-DEV_LOGIN_ENABLED = os.getenv("STREAMLIT_DEV_LOGIN", "").lower() == "true"
-DEV_USER_ID = os.getenv("STREAMLIT_DEV_USER_ID", "local-developer")
+LOGIN_STATE_NAME = "logged_in_username"
+ENV_PATH = Path(__file__).resolve().with_name(".env")
+
+load_dotenv(ENV_PATH)
 
 SECURITY_NOTICE = (
     "이 앱에 입력한 내용은 외부 AI 서비스로 전송되고 채팅 DB에 저장됩니다. "
-    "배포나 접근 제어 설정에 문제가 있으면 대화가 노출될 위험이 있습니다. "
     "주민등록번호, 비밀번호, 결제 정보 등 민감한 정보는 입력하지 마세요."
 )
 
 
 def is_logged_in():
-    return DEV_LOGIN_ENABLED or bool(getattr(st.user, "is_logged_in", False))
-
-
-def is_development_login():
-    return DEV_LOGIN_ENABLED
+    return LOGIN_STATE_NAME in st.session_state
 
 
 def require_login():
     if is_logged_in():
         return
 
+    init_user_database()
     st.title("로그인")
     st.warning(SECURITY_NOTICE)
-    st.write("채팅과 대화 내역은 로그인한 사용자만 사용할 수 있습니다.")
-    st.button("로그인", type="primary", on_click=st.login)
+    login_tab, register_tab = st.tabs(["로그인", "회원가입"])
+
+    with login_tab:
+        with st.form("login_form"):
+            username = st.text_input("아이디")
+            password = st.text_input("비밀번호", type="password")
+            submitted = st.form_submit_button("로그인", type="primary")
+
+        if submitted:
+            if authenticate_user(username, password):
+                st.session_state[LOGIN_STATE_NAME] = username.strip()
+                st.rerun()
+            else:
+                st.error("아이디 또는 비밀번호가 맞지 않습니다.")
+
+    with register_tab:
+        with st.form("register_form", clear_on_submit=True):
+            username = st.text_input("새 아이디")
+            password = st.text_input("새 비밀번호", type="password")
+            submitted = st.form_submit_button("회원가입", type="primary")
+
+        if submitted:
+            if create_user(username, password):
+                st.success("회원가입이 완료되었습니다. 로그인해 주세요.")
+            else:
+                st.error(
+                    "아이디는 비어 있을 수 없고, 비밀번호는 8자 이상이어야 합니다. "
+                    "이미 사용 중인 아이디인지도 확인해 주세요."
+                )
+
     st.stop()
 
 
 def get_user_id():
-    if DEV_LOGIN_ENABLED:
-        return f"development:{DEV_USER_ID}"
+    return f"sqlite:{st.session_state[LOGIN_STATE_NAME]}"
 
-    claims = st.user.to_dict()
-    provider = claims.get("iss", "oidc")
-    subject = claims.get("sub") or claims.get("email")
-    return f"{provider}:{subject}"
+
+def logout():
+    st.session_state.pop(LOGIN_STATE_NAME, None)
+    clear_api_key()
 
 
 def get_api_key():
