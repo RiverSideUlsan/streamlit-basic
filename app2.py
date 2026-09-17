@@ -1,26 +1,36 @@
 import streamlit as st
 
-st.set_page_config(page_title="OpenAI 멀티모달 챗봇", page_icon="🤖", layout="wide")
+from app2_access import clear_api_key, is_development_login, require_login
+from chat_store import init_database
+
+
+st.set_page_config(page_title="배포형 AI 채팅", page_icon="💬", layout="wide")
+
+require_login()
+init_database()
 
 page = st.navigation(
     {
         "채팅": [
-            st.Page(
-                "app2_chat.py",
-                title="OpenAI 멀티모달 챗봇",
-                icon=":material/chat:",
-                default=True,
-            ),
+            st.Page("app2_chat.py", title="AI 채팅", icon="💬", default=True),
         ],
-        "기록": [
-            st.Page(
-                "app2_history.py",
-                title="과거 채팅 내역",
-                icon=":material/history:",
-            ),
+        "관리": [
+            st.Page("app2_key.py", title="API 키 등록", icon="🔑"),
+            st.Page("app2_history.py", title="대화 내역", icon="🕘"),
         ],
     },
     position="sidebar",
 )
+
+with st.sidebar:
+    if is_development_login():
+        st.warning("개발용 임시 로그인 모드입니다. 배포 전에 끄세요.")
+    st.divider()
+    if st.button("로그아웃"):
+        clear_api_key()
+        if is_development_login():
+            st.rerun()
+        else:
+            st.logout()
 
 page.run()

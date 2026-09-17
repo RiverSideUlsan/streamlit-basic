@@ -1,46 +1,42 @@
-import sqlite3
-from pathlib import Path
-
 import streamlit as st
 
-DB_PATH = Path(__file__).resolve().with_name("chat_history.db")
-
-st.title("🕘 과거 채팅 내역")
-st.caption("app2.py에서 SQLite에 저장한 채팅 기록을 읽기 전용으로 보여 줍니다.")
+from app2_access import get_user_id, require_api_key, require_login
+from chat_store import list_sessions, list_turns
 
 
-def load_history():
-    connection = sqlite3.connect(DB_PATH)
-    cursor = connection.cursor()
-    cursor.execute(
-        """
-        SELECT id, role, content_text, image_bytes, file_name, file_content, created_at
-        FROM messages
-        ORDER BY id DESC
-        """
-    )
-    messages = cursor.fetchall()
-    connection.close()
-    return messages
+require_login()
+require_api_key()
 
+user_id = get_user_id()
+sessions = list_sessions(user_id)
 
-messages = load_history()
-st.metric("저장된 메시지", f"{len(messages)}개")
+st.title("🕘 대화 내역")
+st.caption("현재 로그인한 계정의 대화만 확인할 수 있습니다.")
 
-if not messages:
-    st.info("저장된 채팅 내역이 없습니다.")
+if not sessions:
+    st.info("저장된 대화가 없습니다. 채팅에서 새 대화를 시작해 주세요.")
+    st.stop()
 
-for message_id, role, text, image_bytes, file_name, file_content, created_at in messages:
+session_ids = [row["id"] for row in sessions]
+session_id = st.selectbox(
+    "확인할 세션",
+    session_ids,
+    format_func=lambda selected_id: next(
+        row["title"] for row in sessions if row["id"] == selected_id
+    ),
+)
+turns = list_turns(user_id, session_id)
+st.metric("저장된 질문·답변", f"{len(turns)} / 100")
+
+for turn in turns:
     with st.container(border=True):
-        st.caption(f"기록 #{message_id} · {created_at}")
-
-        with st.chat_message(role):
-            if text:
-                st.markdown(text)
-            if image_bytes:
-                st.image(image_bytes, width=300)
-            if file_name:
-                st.caption(f"첨부 파일: {file_name}")
-            if file_content:
-                with st.expander("첨부 파일 내용 보기"):
-                    st.code(file_content)
+        st.caption(turn["created_at"])
+        with st.chat_message("user"):
+            st.markdown(turn["user_text"])
+            if turn["file_name"]:
+                st.caption(f"첨부 파일: {turn['file_name']}")
+        with st.chat_message("assistant"):
+            st.markdown(turn["assistant_text"])
+        if turn["file_content"]:
+            with st.expander("첨부 파일 내용 보기"):
+                st.code(turn["file_content"])
