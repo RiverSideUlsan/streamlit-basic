@@ -1,6 +1,6 @@
 import streamlit as st
 
-from app2_access import (
+from app2.app2_access import (
     SECURITY_NOTICE,
     get_api_key,
     get_user_id,
@@ -8,7 +8,7 @@ from app2_access import (
     register_env_api_key,
     require_login,
 )
-from chat_store import (
+from app2.chat_store import (
     AVAILABLE_MODELS,
     get_user_model,
     get_user_persona,

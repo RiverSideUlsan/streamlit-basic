@@ -6,13 +6,13 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
-from auth_store import authenticate_user, create_user, init_user_database
+from app2.auth_store import authenticate_user, create_user, init_user_database
 
 
 KEY_STATE_NAME = "registered_openai_api_key"
 KEY_SOURCE_STATE_NAME = "openai_api_key_source"
 LOGIN_STATE_NAME = "logged_in_username"
-ENV_FILE_PATH = Path(__file__).with_name(".env")
+ENV_FILE_PATH = Path(__file__).resolve().parents[1] / ".env"
 
 SECURITY_NOTICE = (
     "이 앱에 입력한 내용은 외부 AI 서비스로 전송되고 채팅 DB에 저장됩니다. "
@@ -89,7 +89,7 @@ def require_api_key():
 
     st.title("OpenAI API 키 등록 필요")
     st.warning("채팅을 시작하려면 로그인 세션에 OpenAI API 키를 등록해야 합니다.")
-    st.page_link("app2_mypage.py", label="마이페이지로 이동", icon="👤")
+    st.page_link("app2/app2_mypage.py", label="마이페이지로 이동", icon="👤")
     st.stop()
 
 

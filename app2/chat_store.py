@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 
-DB_PATH = Path(__file__).resolve().with_name("chat_history.db")
+DB_PATH = Path(__file__).resolve().parents[1] / "chat_history.db"
 MAX_SESSIONS = 10
 MAX_TURNS = 100
 DEFAULT_MODEL = "gpt-5.6-luna"

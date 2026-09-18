@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from auth_store import authenticate_user, create_user, init_user_database
+from app2.auth_store import authenticate_user, create_user, init_user_database
 
 
 class AuthStoreTest(unittest.TestCase):

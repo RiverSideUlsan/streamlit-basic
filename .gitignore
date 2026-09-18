@@ -7,3 +7,4 @@ __pycache__/
 .venv/
 .uv-cache/
 .streamlit/secrets.toml
+.streamlit/client_secret_*.json

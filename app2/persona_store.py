@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-PERSONA_DIRECTORY = Path(__file__).parent / "personas"
+PERSONA_DIRECTORY = Path(__file__).resolve().parents[1] / "personas"
 
 
 def load_persona(persona):

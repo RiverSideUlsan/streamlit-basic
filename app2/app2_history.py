@@ -1,7 +1,7 @@
 import streamlit as st
 
-from app2_access import get_user_id, require_login
-from chat_store import list_sessions, list_turns
+from app2.app2_access import get_user_id, require_login
+from app2.chat_store import list_sessions, list_turns
 
 
 require_login()
