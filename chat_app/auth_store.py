@@ -5,7 +5,7 @@ import hmac
 import secrets
 import sqlite3
 
-from app2.chat_store import DB_PATH
+from chat_app.chat_store import DB_PATH
 
 
 PASSWORD_ITERATIONS = 210_000

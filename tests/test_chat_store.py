@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app2.chat_store import (
+from chat_app.chat_store import (
     create_session,
     get_session,
     get_user_model,

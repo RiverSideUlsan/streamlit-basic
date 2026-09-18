@@ -1,8 +1,8 @@
 import streamlit as st
 from openai import OpenAI
 
-from app2.app2_access import get_api_key, get_user_id, require_api_key, require_login
-from app2.chat_store import (
+from chat_app.app2_access import get_api_key, get_user_id, require_api_key, require_login
+from chat_app.chat_store import (
     create_session,
     get_session,
     get_user_model,
@@ -11,7 +11,7 @@ from app2.chat_store import (
     list_turns,
     save_turn,
 )
-from app2.persona_store import load_persona
+from chat_app.persona_store import load_persona
 
 
 PERSONAS = {

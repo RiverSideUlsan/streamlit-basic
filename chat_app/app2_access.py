@@ -6,7 +6,7 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
-from app2.auth_store import authenticate_user, create_user, init_user_database
+from chat_app.auth_store import authenticate_user, create_user, init_user_database
 
 
 KEY_STATE_NAME = "registered_openai_api_key"
@@ -89,7 +89,7 @@ def require_api_key():
 
     st.title("OpenAI API 키 등록 필요")
     st.warning("채팅을 시작하려면 로그인 세션에 OpenAI API 키를 등록해야 합니다.")
-    st.page_link("app2/app2_mypage.py", label="마이페이지로 이동", icon="👤")
+    st.page_link("chat_app/app2_mypage.py", label="마이페이지로 이동", icon="👤")
     st.stop()
 
 

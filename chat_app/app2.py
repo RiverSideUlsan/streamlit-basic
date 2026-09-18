@@ -1,13 +1,13 @@
 import streamlit as st
 
-from app2.app2_access import (
+from chat_app.app2_access import (
     get_user_id,
     get_username,
     is_logged_in,
     logout,
     require_login,
 )
-from app2.chat_store import get_session, init_database
+from chat_app.chat_store import get_session, init_database
 
 
 MASCOT_PATH = "assets/pencil.png"
@@ -80,11 +80,11 @@ apply_pencil_sketch_style()
 page = st.navigation(
     {
         "채팅": [
-            st.Page("app2/app2_chat.py", title="AI 채팅", icon="💬", default=True),
+            st.Page("chat_app/app2_chat.py", title="AI 채팅", icon="💬", default=True),
         ],
         "관리": [
-            st.Page("app2/app2_mypage.py", title="마이페이지", icon="👤"),
-            st.Page("app2/app2_history.py", title="대화 내역", icon="🕘"),
+            st.Page("chat_app/app2_mypage.py", title="마이페이지", icon="👤"),
+            st.Page("chat_app/app2_history.py", title="대화 내역", icon="🕘"),
         ],
     },
     position="hidden",
@@ -114,9 +114,9 @@ with st.sidebar:
     else:
         st.title("채팅")
 
-    st.page_link("app2/app2_chat.py", label="AI 채팅", icon="💬", width="stretch")
-    st.page_link("app2/app2_mypage.py", label="마이페이지", icon="👤", width="stretch")
-    st.page_link("app2/app2_history.py", label="대화 내역", icon="🕘", width="stretch")
+    st.page_link("chat_app/app2_chat.py", label="AI 채팅", icon="💬", width="stretch")
+    st.page_link("chat_app/app2_mypage.py", label="마이페이지", icon="👤", width="stretch")
+    st.page_link("chat_app/app2_history.py", label="대화 내역", icon="🕘", width="stretch")
 
     if is_logged_in():
         st.divider()

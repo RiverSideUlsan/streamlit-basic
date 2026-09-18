@@ -1,6 +1,6 @@
 import unittest
 
-from app2.persona_store import load_persona
+from chat_app.persona_store import load_persona
 
 
 class PersonaStoreTest(unittest.TestCase):
